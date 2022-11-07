@@ -11,6 +11,8 @@
 #include "Components/SceneComponent.h"
 #include "DrawDebugHelpers.h"
 #include "Math/Rotator.h"
+#include "Components/StaticMeshComponent.h"
+
 
 #include "GameFramework/Pawn.h"
 #include "PlaneSim.generated.h"
@@ -40,22 +42,53 @@ public:
 	//Functions
 private:
 
-	FVector CalcLiftDirection();
-	FVector CalcDragDirection();
+	/// <summary>
+	/// Gets the Lift Direction
+	/// </summary>
+	/// <returns> Lift Direction as a FVector </returns>
+	FVector CalculateLiftDirection();
 
-	void CalcDrag();
+	/// <summary>
+	/// Gets the Drag Direction
+	/// </summary>
+	/// <returns> Returns the Drag Direciton as an FVector </returns>
+	FVector CalculateDragDirection();
 
-	void CalcLiftCoefficient();
+	/// <summary>
+	/// Calcuates the Drag
+	/// </summary>
+	void CalculateDrag();
 
-	void CalcFinalLift();
+	/// <summary>
+	/// Calculates the Lift Coefficient
+	/// </summary>
+	void CalculateLiftCoefficient();
 
+	/// <summary>
+	/// Calculates the Final Lift based off of the previous 
+	/// </summary>
+	void CalculateFinalLift();
+
+	/// <summary>
+	/// Calculates the Plane's throttle based on what it's set to
+	/// </summary>
 	void ThrottleControl();
 
+	/// <summary>
+	/// Applies rotation to the plane
+	/// </summary>
+	/// <param name="deltaTime"> The current delta time for this tick</param>
 	void ApplyRotations(float deltaTime);
 
 
+	/// <summary>
+	/// Does final Calculations and Applies Lift
+	/// </summary>
 	void ApplyFinalLift();
 
+	/// <summary>
+	/// Does final Calculations and Applies Drag
+	/// </summary>
 	void ApplyFinalDrag();
 
 
@@ -65,7 +98,6 @@ private:
 
 	
 
-	//Throttle Variables
 	float _throttle{ 0.0f };
 	bool _throttleUp{ false };
 	bool _throttleDown{ false };
@@ -74,63 +106,72 @@ private:
 	bool _thrustSaftey;
 
 	
-
 	FVector _forwardNormalized;
 	FVector _rightNormalized;
-	
-
 	FVector _relativeVelocity;
 
-	float _aspectRatio{ 77.800003f };
+	const float _aspectRatio{ 77.800003f };
 
-	float _liftCoefficient{ 0.0f };
 
-	const float _surfaceArea{ 166.0f };
+	float _internalAngleofAttack{ 0.0f };
 
-	float _finalLift{ 0.0f };
+	
 
+	float _surfaceArea{ 166.0f };
 	float _drag{ 0.0f };
-
 	const float _cDMin{ 0.027f };
-
-	float _oswaltEffect{ 0.81678f };
-
+	const float _oswaltEffect{ 0.81678f };
 	float _multiplier{ 1.0f };
 
-	float _baseAirDensity{ 1.2754f };
+	
 
 
 	FVector _dragDirection;
 	FVector _liftDirection;
 
 	float _inducedDrag{ 0.0f };
-
-
 	float _rotationPitch{ 0.0f };
-	float _rotationYaw{ 0.0f };
-
-
 	float _rate{ 0.0f };
-	
-	
-	float _finalSpeed{ 0.0f };
-
 	float _airControl{ 0.0f };
 
-	float _flapsDegrees{ 0.0f };
+	
 
-	float _spoilerDegrees{ 0.0f };
+	float _deltaTime{ 0.0f };
+	float _pressureAltitude{ 0.0f };
+	float _stallChangeSpeed{ 220.f};
+
+
+	float _isStalling{ false };
+	float _stalllift{ 0.0f };
+
+
+	float _rateofDescent{ 0.0f };
+	float _lastGroundDistanceTick{ 0.0f };
+	float _timeTillImpact{ 0.0f };
+	bool _addTouqueOnce{ false };
 
 
 	public:
 
 		UFUNCTION()
+			/// <summary>
+			/// Controller Input for Pitch
+			/// </summary>
+			/// <param name="Value"> 0 - 1 of the controllers input</param>
 			void RotatePitch(float Value);
 
 		UFUNCTION()
+			/// <summary>
+			/// Controller Input for Yaw
+			/// </summary>
+			/// <param name="Value"> 0 - 1 of the controllers input</param>
 			void RotateYaw(float Value);
 
 		UFUNCTION()
+			/// <summary>
+			/// Controller Input for Roll
+			/// </summary>
+			/// <param name="Value"> 0 - 1 of the controllers input</param>
 			void RotateRoll(float Value);
 
 		UFUNCTION()
@@ -146,6 +187,48 @@ private:
 		UFUNCTION()
 			void ThrottleDownStop();
 
+		UFUNCTION()
+			/// <summary>
+			/// Controller Input for Flaps
+			/// </summary>
+			/// <param name="Value"> 0 - 1 of the controllers input</param>
+			void Flaps(float Value);
+
+		UFUNCTION()
+			/// <summary>
+			/// Controller Input for Spoilers
+			/// </summary>
+			/// <param name="Value"> 0 - 1 of the controllers input</param>
+			void Spoilers(float Value);
+
+
+		UFUNCTION(BlueprintCallable)
+			/// <summary>
+			/// Finds if the plane is about to collide with the ground
+			/// </summary>
+			/// <returns> True or false depending on if will or not, and the rest is handled in blueprints</returns>
+			bool GroundProximity();
+
+		UFUNCTION(BlueprintCallable)
+			/// <summary>
+			/// Finds if the plane is about to collide with another object (not a plane)
+			/// </summary>
+			/// <returns> A true or false depending if it is, and the rest is handled in Blueprints</returns>
+			bool ForwardProximity();
+
+		UFUNCTION(BlueprintCallable)
+			/// <summary>
+			/// Does the TCAS Calulations
+			/// </summary>
+			/// <returns> A true of false for if the plane is in the airspace of another, the rest is handled in blueprints due to UI</returns>
+			bool TCAS();
+
+		UFUNCTION(BlueprintCallable)
+			/// <summary>
+			/// Finds the air desnisty givent the altitude
+			/// </summary>
+			/// <param name="altitude">The current altitude of the plane</param>
+			void CalcuateAirDensity(float altitude);
 
 
 		UPROPERTY(VisibleAnywhere)
@@ -154,8 +237,8 @@ private:
 		UPROPERTY(VisibleAnywhere)
 			USpringArmComponent* SpringArmComp;
 
-		UPROPERTY(VisibleAnywhere)
-			UStaticMeshComponent* _plane;
+		UPROPERTY(BlueprintReadOnly)
+			UStaticMeshComponent* _planes;
 
 
 		UPROPERTY(BlueprintReadOnly)
@@ -163,4 +246,66 @@ private:
 
 		UPROPERTY(BlueprintReadOnly)
 			float _rotationRoll{ 0.0f };
+
+		UPROPERTY(BlueprintReadOnly)
+			float _rotationYaw{ 0.0f };
+
+
+		UPROPERTY(BlueprintReadOnly)
+			float _finalSpeed{ 0.0f };
+
+
+		UPROPERTY(BlueprintReadOnly)
+			float _finalLift{ 0.0f };
+
+
+		UPROPERTY(BlueprintReadWrite)
+			float _liftCoefficient{ 0.0f };
+
+		UPROPERTY(BlueprintReadWrite)
+			float _minFlapsDegreeAngle{ 0.0f };
+
+		UPROPERTY(BlueprintReadWrite)
+			float _maxFlapsDegreeAngle{ 0.0f };
+
+		UPROPERTY(BlueprintReadWrite)
+			float _minSpoilersDegreeAngle{ 0.0f };
+
+		UPROPERTY(BlueprintReadWrite)
+			float _maxSpoilersDegreeAngle{ 0.0f };
+
+		UPROPERTY(BlueprintReadWrite)
+			float _flapSpoilerMultiplier{ 10.0f };
+
+		UPROPERTY(BlueprintReadWrite)
+			bool _isSkidding{false};
+
+		UPROPERTY(BlueprintReadWrite)
+			bool _skidType{ false };
+
+
+		UPROPERTY(BlueprintReadWrite)
+			float _rollMultiplier{ 150.0f };
+
+		UPROPERTY(BlueprintReadWrite)
+			float _pitchYawMultiplier{ 25.0f };
+
+		UPROPERTY(BlueprintReadWrite)
+			float _airDensity{ 0.0f };
+
+
+		UPROPERTY(BlueprintReadWrite)
+		float _flapsDegrees{ 0.0f };
+
+		UPROPERTY(BlueprintReadWrite)
+		float _spoilersDegrees{ 0.0f };
+
+
+		UPROPERTY(BlueprintReadOnly)
+			float _groundDistance{ 0.0f };
+
+		UPROPERTY(BlueprintReadOnly)
+			bool _inContact{ false };
+
+
 };
